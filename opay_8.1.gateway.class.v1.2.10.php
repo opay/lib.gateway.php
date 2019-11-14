@@ -506,7 +506,13 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
                 throw new OpayGatewayException('php_openssl extension have to be enabled and allow_url_fopen must be set On', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);    
             } 
         }
-
+        
+        $headers = "User-Agent: OPAY Client\r\n"
+                  ."Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+                  ."Accept-Language: en-us,en;q=0.5\r\n"
+                  ."Accept-Encoding: identity\r\n" // this client does not support a compression
+                  ."Accept-Charset: utf-8;q=0.7,*;q=0.7\r\n";
+        
         if ($httpMethod == 'GET')
         {
             $url = strtok($url, '?');
@@ -519,15 +525,12 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
                 }
             }
             $url .= '?'.http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738);    
-        } 
-        
-        $headers = "User-Agent: OPAY Client\r\n"
-                  ."Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
-                  ."Accept-Language: en-us,en;q=0.5\r\n"
-                  ."Accept-Encoding: identity\r\n" // this client does not support a compression
-                  ."Accept-Charset: utf-8;q=0.7,*;q=0.7\r\n"
-                  ."Content-Length: ".strlen($content)."\r\n";
-        
+        }
+        else
+        {
+            $headers .= "Content-Length: ".strlen($content)."\r\n";
+        }
+
         if (!$keepAlive)
         {
             $headers .= "Connection: Close\r\n";
@@ -547,12 +550,14 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         if (ini_get('allow_url_fopen')) {
             $params = array(
                 'http' => array(
-                    'content' => $content,
                     'method'  => $httpMethod == 'GET' ? 'GET' : 'POST',
                     'timeout' => $timeout,
                     'header'  => $headers
                 )
             );
+            if ($httpMethod != 'GET') {
+                $params['http']['content'] = $content;
+            }
             $fp = @file_get_contents(
                 $url, 
                 false, 
@@ -564,7 +569,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         elseif (function_exists('curl_init')) {
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
-            if ($httpMethod == 'POST') {
+            if ($httpMethod != 'GET') {
                 curl_setopt($ch, CURLOPT_POST, 1);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $content);
             }
