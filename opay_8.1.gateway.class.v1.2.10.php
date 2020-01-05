@@ -491,6 +491,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     public function sendRequest($url, $httpMethod, $parametersArray, $keepAlive = false, $optionalHeaders = null, $timeout = 3)
     {
         $httpMethod = strtoupper($httpMethod);
+        $content = http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738);
         $parsedUrlArr = parse_url($url);
         if (!array_key_exists('scheme', $parsedUrlArr))
         {
@@ -506,16 +507,14 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             } 
         }
         
-        $params = array(
-          'http' => array(
-            'content' => http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738),
-            'timeout' => $timeout 
-          )
-        );
+        $headers = "User-Agent: OPAY Client\r\n"
+                  ."Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+                  ."Accept-Language: en-us,en;q=0.5\r\n"
+                  ."Accept-Encoding: identity\r\n" // this client does not support a compression
+                  ."Accept-Charset: utf-8;q=0.7,*;q=0.7\r\n";
         
         if ($httpMethod == 'GET')
         {
-            $params['http']['method'] = 'GET';
             $url = strtok($url, '?');
             if (isset($parsedUrlArr['query']))
             {
@@ -526,44 +525,66 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
                 }
             }
             $url .= '?'.http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738);    
-        } 
+        }
         else
         {
-            $params['http']['method']  = 'POST';
-            $params['http']['content'] = http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738);
+            $headers .= "Content-Length: ".strlen($content)."\r\n";
         }
-        
-        $params['http']['timeout'] = $timeout;
-        $params['http']['header']  = "User-Agent: OPAY Client\r\n"
-                                    ."Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
-                                    ."Accept-Language: en-us,en;q=0.5\r\n"
-                                    ."Accept-Encoding: identity\r\n" // this client does not support a compression
-                                    ."Accept-Charset: utf-8;q=0.7,*;q=0.7\r\n"
-                                    ."Content-Length: ".strlen($params['http']['content'])."\r\n";
-        
+
         if (!$keepAlive)
         {
-            $params['http']['header'] .= "Connection: Close\r\n";
+            $headers .= "Connection: Close\r\n";
         }
         else
         {
-            $params['http']['header'] .= "Connection: keep-alive\r\n";
+            $headers .= "Connection: keep-alive\r\n";
         }
            
         if ($optionalHeaders !== null) {
-            $params['http']['header'] .= $optionalHeaders;
+            $headers .= $optionalHeaders;
         }
         
         // removing the last \r\n for possible incompatibilities in some conjunctions of PHP + OpenSSL when file_get_contents returns === false
-        $params['http']['header'] = rtrim($params['http']['header']);
+        $headers = rtrim($headers);
         
-        $fp = @file_get_contents(
+        if (ini_get('allow_url_fopen')) {
+            $params = array(
+                'http' => array(
+                    'method'  => $httpMethod == 'GET' ? 'GET' : 'POST',
+                    'timeout' => $timeout,
+                    'header'  => $headers
+                )
+            );
+            if ($httpMethod != 'GET') {
+                $params['http']['content'] = $content;
+            }
+            $fp = @file_get_contents(
                 $url, 
                 false, 
                 stream_context_create($params)
-        );
-        
-        return $fp;     
+            );
+
+            return $fp;
+        }
+        elseif (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            if ($httpMethod != 'GET') {
+                curl_setopt($ch, CURLOPT_POST, 1);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $content);
+            }
+            curl_setopt($ch, CURLOPT_HTTPHEADER, explode("\r\n", $headers));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+            $data = curl_exec($ch);
+            curl_close($ch);
+
+            return $data;
+        }
+        else
+        { 
+            throw new OpayGatewayException('allow_url_fopen must be set On.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);        
+        }    
     }
     
     protected function iso369_3ToIso369_1($languageCode)
@@ -619,4 +640,4 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         return (isset($arr[$languageCode])) ? $arr[$languageCode] : $arr['en'];       
     }
 }
-    
+
