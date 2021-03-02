@@ -488,7 +488,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
  
     }
     
-    public function sendRequest($url, $httpMethod, $parametersArray, $keepAlive = false, $optionalHeaders = null, $timeout = 3)
+    public function sendRequest($url, $httpMethod, $parametersArray, $keepAlive = false, $optionalHeaders = null, $timeout = 10)
     {
         $httpMethod = strtoupper($httpMethod);
         $content = http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738);

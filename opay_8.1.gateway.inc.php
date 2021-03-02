@@ -13,7 +13,7 @@
     *   Šio kintamojo reikšmė turi atspindėti failo pavadinimą, kuriame yra aprašyta OpayGateway klasė. 
     */
 
-    $opayGatewayClassFileName = 'opay_8.1.gateway.class.v1.2.10.php'; 
+    $opayGatewayClassFileName = 'opay_8.1.gateway.class.v1.2.11.php'; 
 
 
     ////
