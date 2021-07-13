@@ -1,12 +1,8 @@
 <?php
 
-interface OpayGatewayWebServiceException
-{
-    const COMMUNICATION_WITH_SERVER_ERROR       = '21101';
-    const JSON_DECODING_ERROR                   = '21102';
-    const WRONG_JSON_FORMAT                     = '21103';
-     
-}
+namespace Opay\Gateway;
+
+require_once __DIR__ . '/Exception/OpayGatewayWebServiceException.php';
 
 interface OpayGatewayWebServiceInterface
 {

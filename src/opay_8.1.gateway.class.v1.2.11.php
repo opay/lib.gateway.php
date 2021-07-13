@@ -1,9 +1,10 @@
 <?php
 
-require_once dirname(__FILE__).'/opay_8.1.gateway.core.interface.php';
-require_once dirname(__FILE__).'/opay_8.1.gateway.webservice.interface.php';
+namespace Opay\Gateway;
 
-class OpayGatewayException extends Exception implements OpayGatewayCoreException, OpayGatewayWebServiceException{}
+require_once __DIR__ . '/opay_8.1.gateway.core.interface.php';
+require_once __DIR__ . '/opay_8.1.gateway.webservice.interface.php';
+require_once __DIR__ . '/Exception/OpayGatewayException.php';
 
 class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInterface 
 {
