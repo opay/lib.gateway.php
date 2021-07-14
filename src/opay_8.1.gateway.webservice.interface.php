@@ -8,50 +8,50 @@ interface OpayGatewayWebServiceInterface
 {
     
 /////
-//  Funkcijos, naudojamos gauti iš OPAY galimas naudoti reikšmes
+//  Functions used to obtain available values from OPAY
 // 
     
     /**
-    * Funkcija kreipiasi į $url nurodytą web servisą ir grąžina rezultatus,
+    * Function calls the web service specified in the $url and returns the result.
     * 
-    * @param string  $url             - Pilnas HTTPS adresas kartu su nurodytu protokolu. Pvz.: https://gateway.opay.lt/pay/listchannels/
-    * @param array   $parametersArray - Masyvas parametrų, kurie bus siunčiami. Masyvo asociatyvus indeksas atspindi parametro pavadinimą, o reikšmė - parametro reikšmę.
-    * @param boolean $sendEncoded     - Jei nurodyta reikšmė TRUE, tada visi parametrai bus suspausti ir siunčiami kaip vienas parametras pavadinimu "encoded". 
+    * @param string  $url             - The full https address along with the specified protocol. Ex: https://gateway.opay.lt/pay/listchannels/
+    * @param array   $parametersArray - An associative array of parameters to be sent. The key of the array represents the parameter name and the value represents the parameter value.
+    * @param boolean $sendEncoded     - If the value is TRUE, then all parameters will be compressed and sent as a single parameter named "encoded".
     *
-    * @return array                   - Metodas grąžina masyvą. Kurio struktūra tokia:
+    * @return array                   - The method returns an array. The structure of which is as follows: 
     * 
     *                                 array(
     *                                       'response' => array( 
-    *                                                       'language' => <kalbos kodas, kokia grąžinamas atsakykmas. pvz "LTL">
-    *                                                       'result'   => <rezultatas priklauso nuo to, į kokį web servisą kreipiamasi>
-    *                                                       'errors'   => <tuščias masyvas jei klaidų neįvyko> ARBA array(
+    *                                                       'language' => <language code that is used in the response. Ex: "ENG">
+    *                                                       'result'   => <the result depends on which web service is called>
+    *                                                       'errors'   => <empty array if the are no errors> OR array(
     *                                                                                                                       '0' => array(
-    *                                                                                                                                 'code'      => <klaidos kodas>,
-    *                                                                                                                                 'message'   => <klaidos tekstas>,
-    *                                                                                                                                 'solutions' => <tuscias masyvas> ARBA masyvas tekstų         
+    *                                                                                                                                 'code'      => <error code>,
+    *                                                                                                                                 'message'   => <error message>,
+    *                                                                                                                                 'solutions' => <empty array> OR array of strings     
     *                                                                                                                                   )   
     *                                                                                                                    )  
     *                                       )
     *                                 )
     * 
-    * Grąžinamo rezultato pavyzdys:
+    * Response example:
     * 
     *  Array
     *(
     *    [response] => Array
     *    (
-    *        [language] => LIT
+    *        [language] => ENG
     *        [result] => Array
     *        (
     *            [banklink] => Array
     *            (
-    *                [group_title] => Mokėjimas per internetinę bankininkystę
+    *                [group_title] => Internet banking
     *                [channels] => Array
     *                (
     *                    [banklink_swedbank] => Array
     *                    (
     *                        [channel_name] => banklink_swedbank
-    *                        [title] => Swedbank bankas
+    *                        [title] => Swedbank
     *                        [logo_urls] => Array
     *                            (
     *                                [color_33px] => https://widgets.opay.lt/img/banklink_swedbank_color_0x33.png
@@ -66,10 +66,10 @@ interface OpayGatewayWebServiceInterface
     *            [0] => Array
     *            (
     *                [code] => UNKNOWN_SHOW_CHANNEL_NAMES
-    *                [message] => Nežinoma (-os) reikšmė(-ės) dfdgfsg pateikta(-os) parametre [ show_channels ]. 
+    *                [message] => Unknown value dfdgfsg specified in parameter [show_channels]
     *                [solutions] => Array
     *                (
-    *                    [0] => Detalesnę informaciją apie [ show_channels ] ir [ hide_channels ] parametrus galite rasti OPAY mokėjimų sistemos specifikacijoje
+    *                    [0] => More detailed information on [show_channels] and [hide_channels] parameters can be found in the OPAY payment system specification
     *                )
     *            )
     *        )
