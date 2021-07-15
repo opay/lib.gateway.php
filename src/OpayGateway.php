@@ -2,8 +2,8 @@
 
 namespace Opay\Gateway;
 
-require_once __DIR__ . '/opay_8.1.gateway.core.interface.php';
-require_once __DIR__ . '/opay_8.1.gateway.webservice.interface.php';
+require_once __DIR__ . '/OpayGatewayCoreInterface.php';
+require_once __DIR__ . '/OpayGatewayWebServiceInterface.php';
 require_once __DIR__ . '/Exception/OpayGatewayException.php';
 
 class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInterface 
