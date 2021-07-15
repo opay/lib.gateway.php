@@ -45,7 +45,7 @@ interface OpayGatewayCoreInterface
     /** 
     * The function returns what signature algorithm will be used when sending data to OPAY.
     * 
-    * @return string slef::SIGNATURE_TYPE_PASSWORD or self::SIGNATURE_TYPE_RSA
+    * @return string self::SIGNATURE_TYPE_PASSWORD or self::SIGNATURE_TYPE_RSA
     */
     public function getTypeOfSignatureIsUsed();
     
