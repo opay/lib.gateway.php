@@ -14,12 +14,12 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     
     public function setMerchantRsaPrivateKey($merchantRsaPrivateKey)
     {
-        $this->merchantRsaPrivateKey = trim($merchantRsaPrivateKey);    
+        $this->merchantRsaPrivateKey = $this->stripWhiteSpaceFromPem($merchantRsaPrivateKey);
     }
     
     public function setOpayCertificate($opayCertificate)
     {
-        $this->opayCertificate = trim($opayCertificate);    
+        $this->opayCertificate = $this->stripWhiteSpaceFromPem($opayCertificate);
     } 
     
     public function setSignaturePassword($password)
@@ -638,6 +638,20 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             'en' => 'Redirecting, please wait'
         ); 
         return (isset($arr[$languageCode])) ? $arr[$languageCode] : $arr['en'];       
+    }
+
+    /**
+     * removes all white space charaters from pem string but ignores headers and footers
+     */
+    protected function stripWhiteSpaceFromPem($stringValue)
+    {
+        preg_match_all("/-----.*-----/", $stringValue, $matches);
+        if (sizeof($matches) === 1 && sizeof($matches[0]) === 2) {
+            $stringValue = preg_replace("/-----.*-----|[\t\n\r ]/", '', $stringValue);
+            return $matches[0][0] . "\n" . $stringValue . "\n" . $matches[0][1];
+        } else {
+            return trim($stringValue);
+        }
     }
 }
 
