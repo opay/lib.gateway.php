@@ -630,7 +630,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         $arr = array(
             'lt' => 'Vyksta nukreipimas, palaukite',
             'lv' => 'Notiek novirzīšana, lūdzu uzgaidiet',
-            'ee' => 'Palun oodake, teid suunatakse edasi',
+            'et' => 'Palun oodake, teid suunatakse edasi',
             'pl' => 'Przekierowanie, proszę czekać',
             'ru' => 'Перенаправляем, подождите, пожалуйста',
             'de' => 'Umleiten, bitte warten Sie',
