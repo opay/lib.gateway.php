@@ -645,13 +645,11 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
      */
     protected function stripWhiteSpaceFromPem($stringValue)
     {
-        preg_match_all("/-----.*-----/", $stringValue, $matches);
-        if (sizeof($matches) === 1 && sizeof($matches[0]) === 2) {
-            $stringValue = preg_replace("/-----.*-----|[\t\n\r ]/", '', $stringValue);
-            return $matches[0][0] . "\n" . $stringValue . "\n" . $matches[0][1];
-        } else {
-            return trim($stringValue);
-        }
+        preg_match_all('/-----.*-----/', $stringValue, $matches);
+        $stringValue = preg_replace('/-----.*-----/', '', $stringValue);
+        $stringValue = trim($stringValue);
+        $stringValue = preg_replace('/[^a-zA-Z0-9\+\/=\-\s\n]+/', '', $stringValue);
+        return @$matches[0][0]."\n".str_replace(' ', '', $stringValue)."\n".@$matches[0][1];
     }
 }
 
