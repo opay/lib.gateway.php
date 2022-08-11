@@ -7,7 +7,6 @@ class OpayGatewayException extends Exception implements OpayGatewayCoreException
 
 class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInterface 
 {
-
     protected $signaturePassword;
     protected $merchantRsaPrivateKey;
     protected $opayCertificate;
@@ -485,7 +484,6 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         { 
             throw new OpayGatewayException('Could not connect to server.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);        
         }
- 
     }
     
     public function sendRequest($url, $httpMethod, $parametersArray, $keepAlive = false, $optionalHeaders = null, $timeout = 10)
@@ -493,135 +491,122 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         $httpMethod = strtoupper($httpMethod);
         $content = http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738);
         $parsedUrlArr = parse_url($url);
-        if (!array_key_exists('scheme', $parsedUrlArr))
-        {
-            throw new OpayGatewayException('URL must contain a name of a protocol e.g. http:// or https://', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);    
+        if (!array_key_exists('scheme', $parsedUrlArr)) {
+            throw new OpayGatewayException('URL must contain a name of a protocol e.g. http:// or https://', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);
         }
         
-        if (strtolower($parsedUrlArr['scheme']) == 'https')
-        { 
-            $w = stream_get_wrappers();
-            if (!extension_loaded('openssl') || !in_array('https', $w))
-            {
-                throw new OpayGatewayException('php_openssl extension have to be enabled and allow_url_fopen must be set On', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);    
-            } 
+        if (
+            strtolower($parsedUrlArr['scheme']) === 'https'
+            && (!extension_loaded('openssl') || !in_array('https', stream_get_wrappers(), true))
+        ) {
+            throw new OpayGatewayException('php_openssl extension have to be enabled and allow_url_fopen must be set On', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);
         }
         
         $headers = "User-Agent: OPAY Client\r\n"
-                  ."Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
-                  ."Accept-Language: en-us,en;q=0.5\r\n"
-                  ."Accept-Encoding: identity\r\n" // this client does not support a compression
-                  ."Accept-Charset: utf-8;q=0.7,*;q=0.7\r\n";
+            . "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+            . "Accept-Language: en-us,en;q=0.5\r\n"
+            . "Accept-Encoding: identity\r\n" // this client does not support a compression
+            . "Accept-Charset: utf-8;q=0.7,*;q=0.7\r\n";
         
-        if ($httpMethod == 'GET')
-        {
+        if ($httpMethod === 'GET') {
             $url = strtok($url, '?');
-            if (isset($parsedUrlArr['query']))
-            {
+
+            if (isset($parsedUrlArr['query'])) {
                 parse_str($parsedUrlArr['query'], $queryParamsArr);
-                if (!empty($queryParamsArr))
-                {
+                if (!empty($queryParamsArr)) {
                     $parametersArray = array_merge($queryParamsArr, $parametersArray);    
                 }
             }
-            $url .= '?'.http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738);    
-        }
-        else
-        {
-            $headers .= "Content-Length: ".strlen($content)."\r\n";
+
+            $url .= '?' . http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738);
+        } else {
+            $headers .= "Content-Length: " . strlen($content)."\r\n";
         }
 
-        if (!$keepAlive)
-        {
-            $headers .= "Connection: Close\r\n";
-        }
-        else
-        {
-            $headers .= "Connection: keep-alive\r\n";
-        }
-           
-        if ($optionalHeaders !== null) {
-            $headers .= $optionalHeaders;
-        }
+        $headers .= !$keepAlive ? "Connection: Close\r\n" : "Connection: keep-alive\r\n";
+        $headers .= $optionalHeaders !== null ? $optionalHeaders : '';
         
         // removing the last \r\n for possible incompatibilities in some conjunctions of PHP + OpenSSL when file_get_contents returns === false
         $headers = rtrim($headers);
-        
+
+        if (function_exists('curl_init')) {
+            try {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                if ($httpMethod !== 'GET') {
+                    curl_setopt($ch, CURLOPT_POST, 1);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $content);
+                }
+                curl_setopt($ch, CURLOPT_HTTPHEADER, explode("\r\n", $headers));
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+                $data = curl_exec($ch);
+                curl_close($ch);
+
+                return $data;
+            } catch (Exception $e) {
+                // Move to the next method
+            }
+        }
+
         if (ini_get('allow_url_fopen')) {
             $params = array(
                 'http' => array(
-                    'method'  => $httpMethod == 'GET' ? 'GET' : 'POST',
+                    'method'  => $httpMethod === 'GET' ? 'GET' : 'POST',
                     'timeout' => $timeout,
                     'header'  => $headers
                 )
             );
-            if ($httpMethod != 'GET') {
+
+            if ($httpMethod !== 'GET') {
                 $params['http']['content'] = $content;
             }
-            $fp = @file_get_contents(
-                $url, 
-                false, 
+
+            return @file_get_contents(
+                $url,
+                false,
                 stream_context_create($params)
             );
-
-            return $fp;
         }
-        elseif (function_exists('curl_init')) {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            if ($httpMethod != 'GET') {
-                curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $content);
-            }
-            curl_setopt($ch, CURLOPT_HTTPHEADER, explode("\r\n", $headers));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-            $data = curl_exec($ch);
-            curl_close($ch);
 
-            return $data;
-        }
-        else
-        { 
-            throw new OpayGatewayException('allow_url_fopen must be set On.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);        
-        }    
+        throw new OpayGatewayException('allow_url_fopen must be set On.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);
     }
     
     protected function iso369_3ToIso369_1($languageCode)
     {
-        $arr = array(
+        $iso3ToIso2ConversionList = array(
             'aar'=>'aa','abk'=>'ab','ave'=>'ae','afr'=>'af','aka'=>'ak','amh'=>'am','arg'=>'an',
             'ara'=>'ar','asm'=>'as','ava'=>'av','aym'=>'ay','aze'=>'az','bak'=>'ba','bel'=>'be',
-            'bul'=>'bg','bis'=>'bi','bam'=>'bm','ben'=>'bn','bod'=>'bo','bod'=>'bo','bre'=>'br',
-            'bos'=>'bs','cat'=>'ca','che'=>'ce','cha'=>'ch','cos'=>'co','cre'=>'cr','ces'=>'cs',
-            'ces'=>'cs','chu'=>'cu','chv'=>'cv','cym'=>'cy','cym'=>'cy','dan'=>'da','deu'=>'de',
-            'deu'=>'de','div'=>'dv','dzo'=>'dz','ewe'=>'ee','ell'=>'el','ell'=>'el','eng'=>'en',
-            'epo'=>'eo','spa'=>'es','est'=>'et','eus'=>'eu','eus'=>'eu','fas'=>'fa','fas'=>'fa',
-            'ful'=>'ff','fin'=>'fi','fij'=>'fj','fao'=>'fo','fra'=>'fr','fra'=>'fr','fry'=>'fy',
-            'gle'=>'ga','gla'=>'gd','glg'=>'gl','grn'=>'gn','guj'=>'gu','glv'=>'gv','hau'=>'ha',
-            'heb'=>'he','hin'=>'hi','hmo'=>'ho','hrv'=>'hr','hat'=>'ht','hun'=>'hu','hye'=>'hy',
-            'hye'=>'hy','her'=>'hz','ina'=>'ia','ind'=>'id','ile'=>'ie','ibo'=>'ig','iii'=>'ii',
-            'ipk'=>'ik','ido'=>'io','isl'=>'is','isl'=>'is','ita'=>'it','iku'=>'iu','jpn'=>'ja',
-            'jav'=>'jv','kat'=>'ka','kat'=>'ka','kon'=>'kg','kik'=>'ki','kua'=>'kj','kaz'=>'kk',
-            'kal'=>'kl','khm'=>'km','kan'=>'kn','kor'=>'ko','kau'=>'kr','kas'=>'ks','kur'=>'ku',
-            'kom'=>'kv','cor'=>'kw','kir'=>'ky','lat'=>'la','ltz'=>'lb','lug'=>'lg','lim'=>'li',
-            'lin'=>'ln','lao'=>'lo','lit'=>'lt','lub'=>'lu','lav'=>'lv','mlg'=>'mg','mah'=>'mh',
-            'mri'=>'mi','mri'=>'mi','mkd'=>'mk','mkd'=>'mk','mal'=>'ml','mon'=>'mn','mar'=>'mr',
-            'msa'=>'ms','msa'=>'ms','mlt'=>'mt','mya'=>'my','mya'=>'my','nau'=>'na','nob'=>'nb',
-            'nde'=>'nd','nep'=>'ne','ndo'=>'ng','nld'=>'nl','nld'=>'nl','nno'=>'nn','nor'=>'no',
-            'nbl'=>'nr','nav'=>'nv','nya'=>'ny','oci'=>'oc','oji'=>'oj','orm'=>'om','ori'=>'or',
-            'oss'=>'os','pan'=>'pa','pli'=>'pi','pol'=>'pl','pus'=>'ps','por'=>'pt','que'=>'qu',
-            'roh'=>'rm','run'=>'rn','ron'=>'ro','ron'=>'ro','rus'=>'ru','kin'=>'rw','san'=>'sa',
-            'srd'=>'sc','snd'=>'sd','sme'=>'se','sag'=>'sg','sin'=>'si','slk'=>'sk','slk'=>'sk',
-            'slv'=>'sl','smo'=>'sm','sna'=>'sn','som'=>'so','sqi'=>'sq','sqi'=>'sq','srp'=>'sr',
-            'ssw'=>'ss','sot'=>'st','sun'=>'su','swe'=>'sv','swa'=>'sw','tam'=>'ta','tel'=>'te',
-            'tgk'=>'tg','tha'=>'th','tir'=>'ti','tuk'=>'tk','tgl'=>'tl','tsn'=>'tn','ton'=>'to',
-            'tur'=>'tr','tso'=>'ts','tat'=>'tt','twi'=>'tw','tah'=>'ty','uig'=>'ug','ukr'=>'uk',
-            'urd'=>'ur','uzb'=>'uz','ven'=>'ve','vie'=>'vi','vol'=>'vo','wln'=>'wa','wol'=>'wo',
-            'xho'=>'xh','yid'=>'yi','yor'=>'yo','zha'=>'za','zho'=>'zh','zho'=>'zh','zul'=>'zu'
+            'bul'=>'bg','bis'=>'bi','bam'=>'bm','ben'=>'bn','bod'=>'bo','bre'=>'br','bos'=>'bs',
+            'cat'=>'ca','che'=>'ce','cha'=>'ch','cos'=>'co','cre'=>'cr','ces'=>'cs','chu'=>'cu',
+            'chv'=>'cv','cym'=>'cy','dan'=>'da','deu'=>'de','div'=>'dv','dzo'=>'dz','ewe'=>'ee',
+            'ell'=>'el','eng'=>'en','epo'=>'eo','spa'=>'es','est'=>'et','eus'=>'eu','fas'=>'fa',
+            'ful'=>'ff','fin'=>'fi','fij'=>'fj','fao'=>'fo','fra'=>'fr','fry'=>'fy','gle'=>'ga',
+            'gla'=>'gd','glg'=>'gl','grn'=>'gn','guj'=>'gu','glv'=>'gv','hau'=>'ha','heb'=>'he',
+            'hin'=>'hi','hmo'=>'ho','hrv'=>'hr','hat'=>'ht','hun'=>'hu','hye'=>'hy','her'=>'hz',
+            'ina'=>'ia','ind'=>'id','ile'=>'ie','ibo'=>'ig','iii'=>'ii','ipk'=>'ik','ido'=>'io',
+            'isl'=>'is','ita'=>'it','iku'=>'iu','jpn'=>'ja','jav'=>'jv','kat'=>'ka','kon'=>'kg',
+            'kik'=>'ki','kua'=>'kj','kaz'=>'kk','kal'=>'kl','khm'=>'km','kan'=>'kn','kor'=>'ko',
+            'kau'=>'kr','kas'=>'ks','kur'=>'ku','kom'=>'kv','cor'=>'kw','kir'=>'ky','lat'=>'la',
+            'ltz'=>'lb','lug'=>'lg','lim'=>'li','lin'=>'ln','lao'=>'lo','lit'=>'lt','lub'=>'lu',
+            'lav'=>'lv','mlg'=>'mg','mah'=>'mh','mri'=>'mi','mkd'=>'mk','mal'=>'ml','mon'=>'mn',
+            'mar'=>'mr','msa'=>'ms','mlt'=>'mt','mya'=>'my','nau'=>'na','nob'=>'nb','nde'=>'nd',
+            'nep'=>'ne','ndo'=>'ng','nld'=>'nl','nno'=>'nn','nor'=>'no','nbl'=>'nr','nav'=>'nv',
+            'nya'=>'ny','oci'=>'oc','oji'=>'oj','orm'=>'om','ori'=>'or','oss'=>'os','pan'=>'pa',
+            'pli'=>'pi','pol'=>'pl','pus'=>'ps','por'=>'pt','que'=>'qu','roh'=>'rm','run'=>'rn',
+            'ron'=>'ro','rus'=>'ru','kin'=>'rw','san'=>'sa','srd'=>'sc','snd'=>'sd','sme'=>'se',
+            'sag'=>'sg','sin'=>'si','slk'=>'sk','slv'=>'sl','smo'=>'sm','sna'=>'sn','som'=>'so',
+            'sqi'=>'sq','srp'=>'sr','ssw'=>'ss','sot'=>'st','sun'=>'su','swe'=>'sv','swa'=>'sw',
+            'tam'=>'ta','tel'=>'te','tgk'=>'tg','tha'=>'th','tir'=>'ti','tuk'=>'tk','tgl'=>'tl',
+            'tsn'=>'tn','ton'=>'to','tur'=>'tr','tso'=>'ts','tat'=>'tt','twi'=>'tw','tah'=>'ty',
+            'uig'=>'ug','ukr'=>'uk','urd'=>'ur','uzb'=>'uz','ven'=>'ve','vie'=>'vi','vol'=>'vo',
+            'wln'=>'wa','wol'=>'wo','xho'=>'xh','yid'=>'yi','yor'=>'yo','zha'=>'za','zho'=>'zh',
+            'zul'=>'zu'
         );
+
         $languageCode = strtolower($languageCode);
-        return (isset($arr[$languageCode])) ? $arr[$languageCode] : $languageCode;
+
+        return isset($iso3ToIso2ConversionList[$languageCode]) ? $iso3ToIso2ConversionList[$languageCode] : $languageCode;
     }
     
     protected function redirectingTextTranslation($languageCode)
@@ -641,7 +626,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     }
 
     /**
-     * removes all white space charaters from pem string but ignores headers and footers
+     * removes all white space characters from pem string but ignores headers and footers
      */
     protected function stripWhiteSpaceFromPem($stringValue)
     {
