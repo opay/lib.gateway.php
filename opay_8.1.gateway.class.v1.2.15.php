@@ -1,7 +1,7 @@
 <?php
 
-require_once dirname(__FILE__).'/opay_8.1.gateway.core.interface.php';
-require_once dirname(__FILE__).'/opay_8.1.gateway.webservice.interface.php';
+require_once __DIR__ .'/opay_8.1.gateway.core.interface.php';
+require_once __DIR__ .'/opay_8.1.gateway.webservice.interface.php';
 
 class OpayGatewayException extends Exception implements OpayGatewayCoreException, OpayGatewayWebServiceException{}
 
@@ -25,47 +25,43 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     {
         $this->signaturePassword = trim($password);    
     }
-    
+
+    /**
+     * @throws OpayGatewayException
+     */
     public function getTypeOfSignatureIsUsed()
     {
         if (!empty($this->merchantRsaPrivateKey) && !empty($this->opayCertificate))
         {
-            if (function_exists('openssl_pkey_get_public'))
-            {
+            if (function_exists('openssl_pkey_get_public')) {
                 return self::SIGNATURE_TYPE_RSA;
             }
-            else
-            {
-                if (!empty($this->signaturePassword))
-                {
-                    return self::SIGNATURE_TYPE_PASSWORD;
-                }
-                else
-                {
-                    throw new OpayGatewayException('OpenSSL is not available in your server. To use RSA signature type (which is set when using setMerchantRsaPrivateKey() and setOpayCertificate()) install the OpenSSL PHP module. Otherwise use password signature (which is set when using setSignaturePassword()).', OpayGatewayException::SIGNATURE_OPEN_SSL_NOT_FOUND);
-                }    
+
+            if (!empty($this->signaturePassword)) {
+                return self::SIGNATURE_TYPE_PASSWORD;
             }
+
+            throw new OpayGatewayException('OpenSSL is not available in your server. To use RSA signature type (which is set when using setMerchantRsaPrivateKey() and setOpayCertificate()) install the OpenSSL PHP module. Otherwise use password signature (which is set when using setSignaturePassword()).', OpayGatewayException::SIGNATURE_OPEN_SSL_NOT_FOUND);
         }
-        else if (!empty($this->signaturePassword))
-        {
+
+        if (!empty($this->signaturePassword)) {
             return self::SIGNATURE_TYPE_PASSWORD;
         }
-        else
-        {
-            throw new OpayGatewayException('Signature parameters are not set. Use functions setMerchantRsaPrivateKey() and setOpayCertificate() to set parameters for RSA signature type, or setSignaturePassword() for password signature type.', OpayGatewayException::SIGNATURE_PARAMETERS_ARE_NOT_SET);
-        }
+
+        throw new OpayGatewayException('Signature parameters are not set. Use functions setMerchantRsaPrivateKey() and setOpayCertificate() to set parameters for RSA signature type, or setSignaturePassword() for password signature type.', OpayGatewayException::SIGNATURE_PARAMETERS_ARE_NOT_SET);
     }
-    
+
+    /**
+     * @throws OpayGatewayException
+     */
     public function signArrayOfParameters($parametersArray)
     {
-        // cleaning signature parameters if someone tries to sign already signed array
-        if (isset($parametersArray['rsa_signature']))
-        {
+        // Clean signature parameters if someone tries to sign already signed array
+        if (isset($parametersArray['rsa_signature'])) {
             unset($parametersArray['rsa_signature']);   
         }
         
-        if (isset($parametersArray['password_signature']))
-        {
+        if (isset($parametersArray['password_signature'])) {
             unset($parametersArray['password_signature']);   
         }
         
@@ -75,23 +71,21 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         foreach ($parametersArray as $key => $val)
         {
             // http_build_query strips parameters which have null values, so we do the same here (normally you shouldn't pass parameters with null values here)
-            if (!is_null($val))
-            {
-                // converting boolen to integer (normally you shouldn't pass parameters with boolean values here)
-                if (is_bool($val))
-                {
-                    $val = (int)$val;
-                } 
-                $stringToBeSigned .= $key.$val;
+            if (is_null($val)) {
+                continue;
             }
+
+            if (is_bool($val))
+            {
+                $val = (int) $val;
+            }
+
+            $stringToBeSigned .= $key . $val;
         }
          
-        if ($signatureType == self::SIGNATURE_TYPE_RSA)
-        {
+        if ($signatureType === self::SIGNATURE_TYPE_RSA) {
             $parametersArray['rsa_signature'] = $this->signStringUsingPrivateKey($stringToBeSigned, $this->merchantRsaPrivateKey);
-        }
-        else
-        {
+        } else {
             $parametersArray['password_signature'] = $this->signStringUsingPassword($stringToBeSigned, $this->signaturePassword);    
         }
     
@@ -100,66 +94,53 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     
     public function signStringUsingPrivateKey($stringToBeSigned, $privateKey, $toBase64Encode = true)
     {
-        // -- creating private key resource                          
-        $pkeyid = openssl_get_privatekey($privateKey); 
-        if ($pkeyid !== false)
-        {  
-            // -- signing the $stringToBeSigned
-            if (openssl_sign($stringToBeSigned, $signature, $pkeyid) === true)
-            { 
-                if ($toBase64Encode == true)
-                {
-                    // -- encoding to base64
-                    if (($signature = base64_encode($signature)) !== false)
-                    { 
-                        // stripping new lines
-                        $signature = preg_replace("/[\r\n\t]*/", "", $signature); 
-                        // -- freeing the memory
-                        openssl_free_key($pkeyid);
-                        return $signature;
-                    }
-                    else
-                    {
-                        throw new OpayGatewayException('Could not encode to base64 after signing using a private key.', OpayGatewayException::SIGNING_USING_PRIVATE_KEY_BASE_64_ERROR);
-                    }
-                }
-                else
-                {
-                    return $signature;    
-                }
-            }
-            else
-            {
-                throw new OpayGatewayException('Error occurred when signing using private key', OpayGatewayException::SIGNING_USING_PRIVATE_KEY_ERROR);
-            }
-        }
-        else
-        {
+        // Create private key resource
+        $pkeyid = openssl_pkey_get_private($privateKey);
+        if ($pkeyid === false) {
             throw new OpayGatewayException('Error reading private key', OpayGatewayException::SIGNING_USING_PRIVATE_KEY_READING_ERROR);
         }
+
+        if (openssl_sign($stringToBeSigned, $signature, $pkeyid) !== true) {
+            throw new OpayGatewayException('Error occurred when signing using private key', OpayGatewayException::SIGNING_USING_PRIVATE_KEY_ERROR);
+        }
+
+        if (!$toBase64Encode) {
+            return $signature;
+        }
+
+        $signature = base64_encode($signature);
+        // Encode to base64
+        if (!$signature) {
+            $signature = preg_replace("/[\r\n\t]*/", "", $signature);
+            openssl_free_key($pkeyid);
+
+            return $signature;
+        }
+
+        throw new OpayGatewayException('Could not encode to base64 after signing using a private key.', OpayGatewayException::SIGNING_USING_PRIVATE_KEY_BASE_64_ERROR);
     }
     
     public function signStringUsingPassword($stringToBeSigned, $password)
     {
         return md5($stringToBeSigned . $password);
     }
-    
+
     // backward compatibility for mistyped function name
     public function generatetAutoSubmitForm($url, $parametersArray, $sendEncoded = true)
     {
         return $this->generateAutoSubmitForm($url, $parametersArray, $sendEncoded);
     }
-    
+
     public function generateAutoSubmitForm($url, $parametersArray, $sendEncoded = true)
     {
         $language = (!empty($parametersArray['language'])) ? $this->iso369_3ToIso369_1($parametersArray['language']) : 'en';
-        $redirectingText = $this->redirectingTextTranslation($language).'...';
+        $redirectingText = $this->redirectingTextTranslation($language) . '...';
         
         $str = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">';
-        $str .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="'.$language.'" lang="'.$language.'">';
+        $str .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="' . $language . '" lang="' . $language . '">';
         $str .= '<head>';
         $str .= '    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
-        $str .= '    <title>'.$redirectingText.'</title>';
+        $str .= '    <title>' . $redirectingText . '</title>';
         $str .= "
         <style type=\"text/css\">
 
@@ -182,14 +163,12 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
                 width:176px;
                 height:30px;
                 margin:0 auto 30px auto;
-
             } 
             .pbar{
                 width:30px;
                 height:30px;
                 float:left;
                 margin:0 14px 0 0;
-                
             }
             #a1{background-color: #eeeadf;}
             #a2{background-color: #d4e0de;}
@@ -222,11 +201,11 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             @media (max-width:599px) {
                 .window{
                     width: 320px !important;
-                }    
-            }  
-        </style>        
-
+                }
+            }
+        </style>
         ";
+
         $str .= "
         <script type=\"text/javascript\">
         //<![CDATA[
@@ -270,7 +249,6 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             wStyle.marginTop = (w.offsetHeight/2*-1)+'px';
         }
         
-        
         window.onload = function(){
             autoAlign();
             fullBar();
@@ -288,6 +266,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         //]]>
         </script>
         ";
+
         $str .= '</head>';
         $str .= '<body>';
 
@@ -314,26 +293,24 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         ';
         
         $str .= '<form action="'.htmlspecialchars($url, ENT_COMPAT, 'UTF-8').'" method="post" accept-charset="UTF-8" name="redirectForm">';
-        if ($sendEncoded == true)
-        {
+
+        if ($sendEncoded) {
             $encoded = $this->convertArrayOfParametersToEncodedString($parametersArray);
-            $str .= '<input type="hidden" name="encoded" value="'.$encoded.'" />';
-        }
-        else
-        {
+            $str .= '<input type="hidden" name="encoded" value="' . $encoded . '" />';
+        } else {
             foreach ($parametersArray as $key => $val)
             {
                 // http_build_query strips parameters which have null values, so we do the same here (normally you shouldn't pass parameters with null values here)
-                if (!is_null($val))
-                {
-                    // converting boolen to integer (normally you shouldn't pass parameters with boolean values here)
-                    if (is_bool($val))
-                    {
-                        $val = (int)$val;
-                    }
-                
-                    $str .= '<input type="hidden"  name="'.htmlspecialchars($key, ENT_COMPAT, 'UTF-8').'" value="'.htmlspecialchars($val, ENT_COMPAT, 'UTF-8').'" />';
+                if (is_null($val)) {
+                    continue;
                 }
+
+                // Convert boolean to integer (normally you shouldn't pass parameters with boolean values here)
+                if (is_bool($val)) {
+                    $val = (int) $val;
+                }
+
+                $str .= '<input type="hidden"  name="'.htmlspecialchars($key, ENT_COMPAT, 'UTF-8').'" value="'.htmlspecialchars($val, ENT_COMPAT, 'UTF-8').'" />';
             }
         }
 
@@ -348,144 +325,134 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     
     public function convertArrayOfParametersToEncodedString($parametersArray)
     {
-        return strtr(base64_encode(http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738)), array('+' => '-', '/' => '_', '=' => ','));    
+        return strtr(base64_encode(http_build_query($parametersArray, '', '&')), array('+' => '-', '/' => '_', '=' => ','));
     }
-    
+
+    /**
+     * @throws OpayGatewayException
+     */
     public function convertEncodedStringToArrayOfParameters($encodedString)
     {
-        $data = strtr($encodedString, array('-' => '+', '_' => '/', ',' => '='));
-        
-        if (($data = base64_decode($data)) !== false)
-        {
-            $params = array();
-            parse_str($data, $params);
-            return $params;
-        }
-        else
-        {
+        $data = base64_decode(strtr($encodedString, array('-' => '+', '_' => '/', ',' => '=')));
+        if ($data === false) {
             throw new OpayGatewayException('Base64 decoding error when converting encoded request from gateway.', OpayGatewayException::GATEWAY_REQUEST_BASE64_DECODE_ERROR);
-        }    
+        }
+
+        $params = array();
+        parse_str($data, $params);
+        return $params;
     }
     
     public function verifySignature($parametersArray)
     {
-        $rsaSignature      = '';
+        $rsaSignature = '';
         $passwordSignature = '';
         
-        if (isset($parametersArray['rsa_signature']))
-        {
+        if (isset($parametersArray['rsa_signature'])) {
             $rsaSignature = $parametersArray['rsa_signature']; 
             unset($parametersArray['rsa_signature']);   
         }
         
-        if (isset($parametersArray['password_signature']))
-        {
+        if (isset($parametersArray['password_signature'])) {
             $passwordSignature = $parametersArray['password_signature']; 
             unset($parametersArray['password_signature']);   
         }
         
         $stringToBeVerified = '';
-        foreach ($parametersArray as $key => $val)
-        {
+        foreach ($parametersArray as $key => $val) {
             $stringToBeVerified .= $key.$val;
         }
     
-        if (!empty($rsaSignature) && !empty($this->opayCertificate))
-        {
+        if (!empty($rsaSignature) && !empty($this->opayCertificate)) {
             return $this->verifySignatureUsingCertificate($stringToBeVerified, $rsaSignature, $this->opayCertificate);    
         }
-        else if (!empty($passwordSignature) && !empty($this->signaturePassword))
-        {
+
+        if (!empty($passwordSignature) && !empty($this->signaturePassword)) {
             return $this->verifySignatureUsingPassword($stringToBeVerified, $passwordSignature, $this->signaturePassword);    
         }
-        else
-        {
-            throw new OpayGatewayException('Could not verify a signature. Signature parameters are not set properly. Use functions setMerchantRsaPrivateKey() and setOpayCertificate() to set parameters for RSA signature type, or setSignaturePassword() for password signature type. ', OpayGatewayException::SIGNATURE_PARAMETERS_ARE_NOT_SET);        
-        }
+
+        throw new OpayGatewayException(
+            'Could not verify a signature. Signature parameters are not set properly. Use functions setMerchantRsaPrivateKey() and setOpayCertificate() to set parameters for RSA signature type, or setSignaturePassword() for password signature type. ',
+            OpayGatewayException::SIGNATURE_PARAMETERS_ARE_NOT_SET
+        );
     }
     
     public function verifySignatureUsingCertificate($string, $signature, $certificate)
     {  
-        // -- extractig the public key 
-        $pubkeyid = openssl_pkey_get_public($certificate); 
-        if ($pubkeyid !== false)
-        {
-            // -- verifying the signature 
-            $ok = openssl_verify($string, base64_decode($signature), $pubkeyid); 
-            openssl_free_key($pubkeyid);
-            if ($ok === 1)
-            {   
-                return true;
-            }
-            else if ($ok === 0)
-            {    
-                return false;
-            }
-            else
-            {
-                throw new OpayGatewayException('Error reading certificate or extracting a public key from it', OpayGatewayException::SIGNATURE_VERIFICATION_USING_CERTIFICATE_ERROR);
-            } 
-        }
-        else
-        {
+        // Extract the public key
+        $pubKeyId = openssl_pkey_get_public($certificate);
+        if ($pubKeyId === false) {
             throw new OpayGatewayException('Error reading certificate or extracting a public key from it', OpayGatewayException::SIGNATURE_VERIFICATION_USING_CERTIFICATE_READING_ERROR);
         }
+
+        // Verify the signature
+        $ok = openssl_verify($string, base64_decode($signature), $pubKeyId);
+        openssl_free_key($pubKeyId);
+
+        if ($ok === 1) {
+            return true;
+        }
+
+        if ($ok === 0) {
+            return false;
+        }
+
+        throw new OpayGatewayException('Error reading certificate or extracting a public key from it', OpayGatewayException::SIGNATURE_VERIFICATION_USING_CERTIFICATE_ERROR);
     }
     
     public function verifySignatureUsingPassword($string, $signature, $password)
     {
-        return ($this->signStringUsingPassword($string, $password) == $signature);     
+        return $this->signStringUsingPassword($string, $password) === $signature;
     }
-    
-    
+
+    /**
+     * @throws OpayGatewayException
+     */
     public function webServiceRequest($url, $parametersArray, $sendEncoded = true, $decodeJson = true)
     {
-        if ($sendEncoded == true)
-        {        
+        if ($sendEncoded) {
             $encoded = $this->convertArrayOfParametersToEncodedString($parametersArray);
             unset($parametersArray);
             $parametersArray['encoded'] = &$encoded;
         }
         
         $data = $this->sendRequest($url, 'POST', $parametersArray, false, "Content-Type: application/x-www-form-urlencoded\r\n");
-        
-        if ($data !== false)
-        {
-            $data = trim($data);
-            if ($decodeJson)
-            {
-                if (version_compare(PHP_VERSION, '5.2.0', '<')) 
-                {
-                    throw new OpayGatewayException('Cannot decode JSON. Your PHP version ('.PHP_VERSION.') does not have json_decode function. This function is included starting from PHP version 5.2.0. You may pass FALSE to $decodeJson parameter when calling OpayGateway::webServiceRequest method and decode JSON by yourself.', OpayGatewayException::JSON_DECODING_ERROR);
-                }
-                $data = json_decode($data, true);
-                
-                if (version_compare(PHP_VERSION, '5.3.0', '>=')) 
-                {
-                    $jsonLastError = json_last_error();
-                    if ($jsonLastError != JSON_ERROR_NONE) 
-                    {
-                        throw new OpayGatewayException('Could not decode JSON. json_decode() error code is '.$jsonLastError, OpayGatewayException::JSON_DECODING_ERROR);    
-                    }
-                }
-                else if ($data === NULL) 
-                {
-                    throw new OpayGatewayException('Wrong JSON format or the encoded data is deeper than the recursion limit.', OpayGatewayException::JSON_DECODING_ERROR);
-                }
-                
-                if (!is_array($data))
-                {
-                    throw new OpayGatewayException('Didn\'t get an array after decoding the JSON returned by the web service', OpayGatewayException::WRONG_JSON_FORMAT);    
-                }
-            }
-            return $data;
+        if ($data === false) {
+            return false;
         }
-        else
-        { 
-            throw new OpayGatewayException('Could not connect to server.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);        
+
+        $data = trim($data);
+        if (!$decodeJson) {
+            throw new OpayGatewayException('Could not connect to server.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);
         }
+
+        if (version_compare(PHP_VERSION, '5.2.0', '<')) {
+            throw new OpayGatewayException(
+                'Cannot decode JSON. Your PHP version (' . PHP_VERSION . ') does not have json_decode function. This function is included starting from PHP version 5.2.0. You may pass FALSE to $decodeJson parameter when calling OpayGateway::webServiceRequest method and decode JSON by yourself.',
+                OpayGatewayException::JSON_DECODING_ERROR
+            );
+        }
+
+        $data = json_decode($data, true);
+        if ($data === null) {
+            throw new OpayGatewayException('Wrong JSON format or the encoded data is deeper than the recursion limit.', OpayGatewayException::JSON_DECODING_ERROR);
+        }
+
+        if (!is_array($data)) {
+            throw new OpayGatewayException('Didn\'t get an array after decoding the JSON returned by the web service', OpayGatewayException::WRONG_JSON_FORMAT);
+        }
+
+        $jsonLastError = json_last_error();
+        if ($jsonLastError !== JSON_ERROR_NONE && version_compare(PHP_VERSION, '5.3.0', '>=')) {
+            throw new OpayGatewayException('Could not decode JSON. json_decode() error code is '.$jsonLastError, OpayGatewayException::JSON_DECODING_ERROR);
+        }
+
+        return $data;
     }
-    
+
+    /**
+     * @throws OpayGatewayException
+     */
     public function sendRequest($url, $httpMethod, $parametersArray, $keepAlive = false, $optionalHeaders = null, $timeout = 10)
     {
         $httpMethod = strtoupper($httpMethod);
@@ -526,7 +493,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         $headers .= !$keepAlive ? "Connection: Close\r\n" : "Connection: keep-alive\r\n";
         $headers .= $optionalHeaders !== null ? $optionalHeaders : '';
         
-        // removing the last \r\n for possible incompatibilities in some conjunctions of PHP + OpenSSL when file_get_contents returns === false
+        // Remove the last \r\n for possible incompatibilities in some conjunctions of PHP + OpenSSL when file_get_contents returns === false
         $headers = rtrim($headers);
 
         if (function_exists('curl_init')) {
@@ -621,12 +588,13 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             'de' => 'Umleiten, bitte warten Sie',
             'fr' => 'Redirection, S\'il vous plaît attendre',
             'en' => 'Redirecting, please wait'
-        ); 
+        );
+
         return (isset($arr[$languageCode])) ? $arr[$languageCode] : $arr['en'];       
     }
 
     /**
-     * removes all white space characters from pem string but ignores headers and footers
+     * Remove all white space characters from pem string but ignores headers and footers
      */
     protected function stripWhiteSpaceFromPem($stringValue)
     {
@@ -634,6 +602,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         $stringValue = preg_replace('/-----.*-----/', '', $stringValue);
         $stringValue = trim($stringValue);
         $stringValue = preg_replace('/[^a-zA-Z0-9\+\/=\-\s\n]+/', '', $stringValue);
+
         return @$matches[0][0]."\n".str_replace(' ', '', $stringValue)."\n".@$matches[0][1];
     }
 }
