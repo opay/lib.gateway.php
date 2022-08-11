@@ -109,15 +109,14 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         }
 
         $signature = base64_encode($signature);
-        // Encode to base64
         if (!$signature) {
-            $signature = preg_replace("/[\r\n\t]*/", "", $signature);
-            openssl_free_key($pkeyid);
-
-            return $signature;
+            throw new OpayGatewayException('Could not encode to base64 after signing using a private key.', OpayGatewayException::SIGNING_USING_PRIVATE_KEY_BASE_64_ERROR);
         }
 
-        throw new OpayGatewayException('Could not encode to base64 after signing using a private key.', OpayGatewayException::SIGNING_USING_PRIVATE_KEY_BASE_64_ERROR);
+        $signature = preg_replace("/[\r\n\t]*/", "", $signature);
+        openssl_free_key($pkeyid);
+
+        return $signature;
     }
     
     public function signStringUsingPassword($stringToBeSigned, $password)
@@ -510,9 +509,12 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
                 $data = curl_exec($ch);
                 curl_close($ch);
 
-                return $data;
+                // Try next method if false is returned
+                if ($data !== false) {
+                    return $data;
+                }
             } catch (Exception $e) {
-                // Move to the next method
+                // Try next method if curl fails
             }
         }
 
