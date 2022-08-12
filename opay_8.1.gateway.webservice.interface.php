@@ -2,18 +2,16 @@
 
 interface OpayGatewayWebServiceException
 {
-    const COMMUNICATION_WITH_SERVER_ERROR       = '21101';
-    const JSON_DECODING_ERROR                   = '21102';
-    const WRONG_JSON_FORMAT                     = '21103';
-     
+    const COMMUNICATION_WITH_SERVER_ERROR   = '21101';
+    const JSON_DECODING_ERROR               = '21102';
+    const WRONG_JSON_FORMAT                 = '21103';
 }
 
 interface OpayGatewayWebServiceInterface
 {
-    
-/////
-//  Funkcijos, naudojamos gauti iš OPAY galimas naudoti reikšmes
-// 
+    //
+    //  Funkcijos, naudojamos gauti iš OPAY galimas naudoti reikšmes
+    //
     
     /**
     * Funkcija kreipiasi į $url nurodytą web servisą ir grąžina rezultatus,
@@ -81,10 +79,5 @@ interface OpayGatewayWebServiceInterface
     *)
     * 
     */
-    
     public function webServiceRequest($url, $parametersArray, $sendEncoded = true);
-   
 }
-
-
-?>

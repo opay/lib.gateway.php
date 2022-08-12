@@ -9,21 +9,19 @@ interface OpayGatewayCoreException
     const SIGNING_USING_PRIVATE_KEY_BASE_64_ERROR                   = '11105'; 
     const SIGNING_USING_PRIVATE_KEY_ERROR                           = '11106'; 
     const SIGNING_USING_PRIVATE_KEY_READING_ERROR                   = '11107';
-    const GATEWAY_REQUEST_BASE64_DECODE_ERROR                       = '11108'; 
-     
+    const GATEWAY_REQUEST_BASE64_DECODE_ERROR                       = '11108';
 }
 
 interface OpayGatewayCoreInterface
 {
-
     const SIGNATURE_TYPE_PASSWORD = 'signature_type_password';
     const SIGNATURE_TYPE_RSA      = 'signature_type_rsa';
     
-/////
-// Funkcijos, skirtos pasirašymo būdui nustatyti siunčiant ir gaunant duomenis iš/į OPAY.
-// Pagal atliktus nustatymus bus automatišktai parinktas pasirašymo algoritmas. 
-// Visų pirma yra tikrinama ar užtenka parametrų RSA parašo algoritmui, o tik tada slaptažodžio parašui.
-//
+    //
+    // Funkcijos, skirtos pasirašymo būdui nustatyti siunčiant ir gaunant duomenis iš/į OPAY.
+    // Pagal atliktus nustatymus bus automatišktai parinktas pasirašymo algoritmas.
+    // Visų pirma yra tikrinama ar užtenka parametrų RSA parašo algoritmui, o tik tada slaptažodžio parašui.
+    //
     
     /**
     * Funkcija, skirta prekybininko privačiam raktui nustatyti. 
@@ -40,8 +38,7 @@ interface OpayGatewayCoreInterface
     * @param string $opayCertificate
     */
     public function setOpayCertificate($opayCertificate);
-   
-    
+
     /**
     * Funkcija, skirta OPAY išduotam pasirašymo slaptažodžiui nustatyti.
     * Reikalinga norint naudotis parašo slaptažodžiu algoritmu.
@@ -50,20 +47,16 @@ interface OpayGatewayCoreInterface
     */
     public function setSignaturePassword($password);
 
-    
     /** 
     * Funkcija grąžina koks parašo algoritmas bus naudojamas siunčiant duomenis į OPAY
     * 
     * @return string slef::SIGNATURE_TYPE_PASSWORD or self::SIGNATURE_TYPE_RSA
     */
     public function getTypeOfSignatureIsUsed();
-    
 
-    
-/////
-// Funkcijos, naudojamos siunčiant užklausą apmokėjimui
-//
-    
+    //
+    // Funkcijos, naudojamos siunčiant užklausą apmokėjimui
+    //
     
     /**
     * Prie asociatyvaus parametrų masyvo $parametersArray prideda dar vieną masyvo narį indekso pavadinimu "rsa_signature" arba "password_signature" (priklausomai nuo jūsų pasirinkto pasirašymo būdo),
@@ -78,8 +71,7 @@ interface OpayGatewayCoreInterface
     * @return array                  - Metodas grąžina parametrų masyvą $parametersArray su pridėtu papildomu masyvo nariu, indekso pavadinimu "rsa_signature"
     */
     public function signArrayOfParameters($parametersArray);
-    
-    
+
     /**
     * Funkcija, skirta HTML dokumentui išvesti, su jame esančia forma (<form>), kuri sudaryta iš parametrų, 
     * kuriuos ruošiamasi siųsti POST metodu į funkcijai pateiktą https adresą ($url). Ši forma, tik papuolusi į naršyklę,
@@ -93,8 +85,7 @@ interface OpayGatewayCoreInterface
     * @return string                  - Metodas grąžina paruošto HTML dokumento tekstą (eilutę), kurį reikės išvesti (print) į naršyklę, tokioje PHP scenarijaus vietoje, kad prieš tai nebūtų išvesta nieko kito.
     */
     public function generateAutoSubmitForm($url, $parametersArray, $sendEncoded = true); 
-                                    
-    
+
     /**
     * Funkcija konvertuoja parametrų masyvą į užkoduotą eilutę.
     * Plačiau apie tai galite skaityti Opay integravimo specifikacijoje, skiltyje "Duomenų kodavimas, siekiant išvengti galimų iškraipymų". 
@@ -105,16 +96,11 @@ interface OpayGatewayCoreInterface
     * @return string                 - Metodas grąžina sugeneruotą eilutę.
     */
     public function convertArrayOfParametersToEncodedString($parametersArray);
-    
-    
-    
-    
-/////
-// Funkcijos, naudojamos priimant iš OPAY užklausą (pranešimą) apie apmokėjimą
-//
-    
-    
-    
+
+    //
+    // Funkcijos, naudojamos priimant iš OPAY užklausą (pranešimą) apie apmokėjimą
+    //
+
     /**
     * Funkcija konvertuoja užkoduotą eilutę į parametrų masyvą.
     * Plačiau apie tai galite skaityti Opay integravimo specifikacijoje, skiltyje "Duomenų kodavimas, siekiant išvengti galimų iškraipymų".
@@ -124,8 +110,7 @@ interface OpayGatewayCoreInterface
     * @return array                  - Metodas grąžina asociatyvų parametrų masyvą.
     */
     public function convertEncodedStringToArrayOfParameters($encodedString);
-    
-    
+
     /**
     * Funkcija patikrina ar pasirašyto $parametersArray masyvo informacija yra teisinga ir ar panaudotas teisingas raktas tai informacijai pasirašyti.
     * $parametersArray masyvas laikomas pasirašytu kai turi narį, indekso pavadinimu "rsa_signature" arba "password_signature", priklausomai nuo pasirašymo būdo, kurį nustatėte 
@@ -139,9 +124,5 @@ interface OpayGatewayCoreInterface
     * @return boolean               - Metodas grąžina TRUE jei informacija ir panaudotas raktas informacijai pasirašyti yra teisingi
     */  
     public function verifySignature($parametersArray);
-    
-    
-
-    
 }
 

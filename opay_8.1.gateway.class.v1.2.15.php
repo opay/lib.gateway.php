@@ -1,7 +1,7 @@
 <?php
 
-require_once __DIR__ .'/opay_8.1.gateway.core.interface.php';
-require_once __DIR__ .'/opay_8.1.gateway.webservice.interface.php';
+require_once __DIR__ . '/opay_8.1.gateway.core.interface.php';
+require_once __DIR__ . '/opay_8.1.gateway.webservice.interface.php';
 
 class OpayGatewayException extends Exception implements OpayGatewayCoreException, OpayGatewayWebServiceException{}
 
@@ -141,20 +141,20 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         $str .= '    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
         $str .= '    <title>' . $redirectingText . '</title>';
         $str .= "
-        <style type=\"text/css\">
+        <style>
 
-            html, body, form, p { margin: 0px; padding: 0px; }
+            html, body, form, p { margin: 0; padding: 0; }
             html, body { height: 100%; background: rgb(242, 242, 242); }
             h1 { font-size: 24px; font-weight: normal; color: rgb(68, 68, 68); margin:0; line-height: 100%; letter-spacing: normal; padding-bottom:24px;}
-            p { margin: 0px 0px 15px; }
+            p { margin: 0 0 15px; }
 
-            .clear { clear: both; display: block; height: 1px; overflow: hidden; margin: -1px 0px 0px; }
+            .clear { clear: both; display: block; height: 1px; overflow: hidden; margin: -1px 0 0; }
             body, div, p{ font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 150%; color: rgb(0, 0, 0); }
 
             #inprogress{padding: 50px 20px 0 20px;}
 
             .root { min-height: 100%; position: relative; text-align: center; background: rgb(242, 242, 242); }
-            #window { box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 5px; -webkit-box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 5px; width: 600px; margin: 70px auto 0px; }
+            #window { box-shadow: rgba(0, 0, 0, 0.2) 0 1px 5px; -webkit-box-shadow: rgba(0, 0, 0, 0.2) 0 1px 5px; width: 600px; margin: 70px auto 0; }
             .content { position: relative; background: rgb(255, 255, 255); }
             .posrel { position: relative; }
 
@@ -178,7 +178,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             #legal { position: relative; border-top-width: 1px; border-top-style: solid; border-top-color: rgb(234, 234, 234); padding: 30px 40px 15px; }
             #legal p, #legal strong { font-size: 12px; color: rgb(98, 98, 98); }
             #legal p a { font-size: 12px; color: rgb(98, 98, 98); text-decoration: none; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: rgb(176, 176, 176); }
-            #legal p a:hover { border-bottom-width: 0px; border-bottom-style: solid; border-bottom-color: rgb(176, 176, 176); }
+            #legal p a:hover { border-bottom-width: 0; border-bottom-style: solid; border-bottom-color: rgb(176, 176, 176); }
 
             .cert {overflow:hidden; width:1px; height:1px;}
             
@@ -276,7 +276,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
                     <div class="posrel">
                         <div class="content">
                             <div id="inprogress">
-                                <h1>'.$redirectingText.'</h1>
+                                <h1>' . $redirectingText . '</h1>
                                 <div class="progess-bar"> 
                                     <div id="a1" class="pbar">&nbsp;</div>
                                     <div id="a2" class="pbar">&nbsp;</div>
@@ -291,7 +291,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             </div>
         ';
         
-        $str .= '<form action="'.htmlspecialchars($url, ENT_COMPAT, 'UTF-8').'" method="post" accept-charset="UTF-8" name="redirectForm">';
+        $str .= '<form action="' . htmlspecialchars($url, ENT_COMPAT, 'UTF-8') . '" method="post" accept-charset="UTF-8" name="redirectForm">';
 
         if ($sendEncoded) {
             $encoded = $this->convertArrayOfParametersToEncodedString($parametersArray);
@@ -309,7 +309,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
                     $val = (int) $val;
                 }
 
-                $str .= '<input type="hidden"  name="'.htmlspecialchars($key, ENT_COMPAT, 'UTF-8').'" value="'.htmlspecialchars($val, ENT_COMPAT, 'UTF-8').'" />';
+                $str .= '<input type="hidden"  name="' . htmlspecialchars($key, ENT_COMPAT, 'UTF-8') . '" value="' . htmlspecialchars($val, ENT_COMPAT, 'UTF-8') . '" />';
             }
         }
 
@@ -443,7 +443,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
 
         $jsonLastError = json_last_error();
         if ($jsonLastError !== JSON_ERROR_NONE && version_compare(PHP_VERSION, '5.3.0', '>=')) {
-            throw new OpayGatewayException('Could not decode JSON. json_decode() error code is '.$jsonLastError, OpayGatewayException::JSON_DECODING_ERROR);
+            throw new OpayGatewayException('Could not decode JSON. json_decode() error code is ' . $jsonLastError, OpayGatewayException::JSON_DECODING_ERROR);
         }
 
         return $data;
@@ -486,7 +486,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
 
             $url .= '?' . http_build_query($parametersArray, '', '&', PHP_QUERY_RFC1738);
         } else {
-            $headers .= "Content-Length: " . strlen($content)."\r\n";
+            $headers .= "Content-Length: " . strlen($content) . "\r\n";
         }
 
         $headers .= !$keepAlive ? "Connection: Close\r\n" : "Connection: keep-alive\r\n";
@@ -541,7 +541,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         throw new OpayGatewayException('allow_url_fopen must be set On.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);
     }
     
-    protected function iso369_3ToIso369_1($languageCode)
+    private function iso369_3ToIso369_1($languageCode)
     {
         $iso3ToIso2ConversionList = array(
             'aar'=>'aa','abk'=>'ab','ave'=>'ae','afr'=>'af','aka'=>'ak','amh'=>'am','arg'=>'an',
@@ -578,7 +578,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         return isset($iso3ToIso2ConversionList[$languageCode]) ? $iso3ToIso2ConversionList[$languageCode] : $languageCode;
     }
     
-    protected function redirectingTextTranslation($languageCode)
+    private function redirectingTextTranslation($languageCode)
     {
         $languageCode = $this->iso369_3ToIso369_1($languageCode);
         $arr = array(
@@ -598,14 +598,14 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     /**
      * Remove all white space characters from pem string but ignores headers and footers
      */
-    protected function stripWhiteSpaceFromPem($stringValue)
+    private function stripWhiteSpaceFromPem($stringValue)
     {
         preg_match_all('/-----.*-----/', $stringValue, $matches);
         $stringValue = preg_replace('/-----.*-----/', '', $stringValue);
         $stringValue = trim($stringValue);
         $stringValue = preg_replace('/[^a-zA-Z0-9\+\/=\-\s\n]+/', '', $stringValue);
 
-        return @$matches[0][0]."\n".str_replace(' ', '', $stringValue)."\n".@$matches[0][1];
+        return @$matches[0][0] . "\n" . str_replace(' ', '', $stringValue) . "\n" . @$matches[0][1];
     }
 }
 
