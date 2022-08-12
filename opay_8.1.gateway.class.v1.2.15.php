@@ -75,8 +75,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
                 continue;
             }
 
-            if (is_bool($val))
-            {
+            if (is_bool($val)) {
                 $val = (int) $val;
             }
 
@@ -85,10 +84,12 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
          
         if ($signatureType === self::SIGNATURE_TYPE_RSA) {
             $parametersArray['rsa_signature'] = $this->signStringUsingPrivateKey($stringToBeSigned, $this->merchantRsaPrivateKey);
-        } else {
-            $parametersArray['password_signature'] = $this->signStringUsingPassword($stringToBeSigned, $this->signaturePassword);    
+
+            return $parametersArray;
         }
-    
+
+        $parametersArray['password_signature'] = $this->signStringUsingPassword($stringToBeSigned, $this->signaturePassword);
+
         return $parametersArray;
     }
     
@@ -473,7 +474,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             . "Accept-Language: en-us,en;q=0.5\r\n"
             . "Accept-Encoding: identity\r\n" // this client does not support a compression
             . "Accept-Charset: utf-8;q=0.7,*;q=0.7\r\n";
-        
+
         if ($httpMethod === 'GET') {
             $url = strtok($url, '?');
 
