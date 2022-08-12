@@ -418,12 +418,12 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         
         $data = $this->sendRequest($url, 'POST', $parametersArray, false, "Content-Type: application/x-www-form-urlencoded\r\n");
         if ($data === false) {
-            return false;
+            throw new OpayGatewayException('Could not connect to server.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);
         }
 
         $data = trim($data);
         if (!$decodeJson) {
-            throw new OpayGatewayException('Could not connect to server.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);
+            return $data;
         }
 
         if (version_compare(PHP_VERSION, '5.2.0', '<')) {
