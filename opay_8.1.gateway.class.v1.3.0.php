@@ -84,7 +84,6 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             }
 
             $parameters['metadata']['php_version'] = $phpVersion;
-
         } catch (Exception $exception) {
             // In case of exception ignore it and run code without metadata
         }
