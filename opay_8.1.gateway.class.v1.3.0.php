@@ -53,47 +53,6 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     }
 
     /**
-     * @param array $parameters
-     * @param bool $sendPrivateData
-     * @return array
-     */
-    public function addMetadata($parameters, $sendPrivateData)
-    {
-        if (
-            !is_array($parameters)
-            || (array_key_exists('metadata', $parameters) && !is_array($parameters['metadata']))
-        ) {
-            return $parameters;
-        }
-
-        $parameters['metadata']['php_library_version'] = self::LIB_VERSION;
-
-        if ($sendPrivateData !== true) {
-            unset($parameters['metadata']['app_version']);
-            $this->denormalizeMetadata($parameters);
-
-            return $parameters;
-        }
-
-        try {
-            $phpVersion = PHP_VERSION;
-            if ($phpVersion === null || strlen($phpVersion) < 3 || strlen($phpVersion) > 20) {
-                $this->denormalizeMetadata($parameters);
-
-                return $parameters;
-            }
-
-            $parameters['metadata']['php_version'] = $phpVersion;
-        } catch (Exception $exception) {
-            // In case of exception ignore it and run code without metadata
-        }
-
-        $this->denormalizeMetadata($parameters);
-
-        return $parameters;
-    }
-
-    /**
      * @throws OpayGatewayException
      */
     public function signArrayOfParameters($parametersArray, $sendPrivateData = true)
@@ -663,6 +622,47 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         }
 
         $parameters['metadata'] = json_encode($parameters['metadata']);
+    }
+
+    /**
+     * @param array $parameters
+     * @param bool $sendPrivateData
+     * @return array
+     */
+    private function addMetadata($parameters, $sendPrivateData)
+    {
+        if (
+            !is_array($parameters)
+            || (array_key_exists('metadata', $parameters) && !is_array($parameters['metadata']))
+        ) {
+            return $parameters;
+        }
+
+        $parameters['metadata']['php_library_version'] = self::LIB_VERSION;
+
+        if ($sendPrivateData !== true) {
+            unset($parameters['metadata']['app_version']);
+            $this->denormalizeMetadata($parameters);
+
+            return $parameters;
+        }
+
+        try {
+            $phpVersion = PHP_VERSION;
+            if ($phpVersion === null || strlen($phpVersion) < 3 || strlen($phpVersion) > 20) {
+                $this->denormalizeMetadata($parameters);
+
+                return $parameters;
+            }
+
+            $parameters['metadata']['php_version'] = $phpVersion;
+        } catch (Exception $exception) {
+            // In case of exception ignore it and run code without metadata
+        }
+
+        $this->denormalizeMetadata($parameters);
+
+        return $parameters;
     }
 }
 
