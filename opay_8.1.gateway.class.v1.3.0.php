@@ -84,10 +84,12 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             }
 
             $parameters['metadata']['php_version'] = $phpVersion;
-            $this->denormalizeMetadata($parameters);
+
         } catch (Exception $exception) {
             // In case of exception ignore it and run code without metadata
         }
+
+        $this->denormalizeMetadata($parameters);
 
         return $parameters;
     }
