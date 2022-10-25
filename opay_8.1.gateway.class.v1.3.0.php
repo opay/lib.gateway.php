@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/opay_8.1.gateway.core.interface.php';
 require_once __DIR__ . '/opay_8.1.gateway.webservice.interface.php';
+define('LIB_VERSION', '1.3.0');
 
 class OpayGatewayException extends Exception implements OpayGatewayCoreException, OpayGatewayWebServiceException{}
 
@@ -10,7 +11,6 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     protected $signaturePassword;
     protected $merchantRsaPrivateKey;
     protected $opayCertificate;
-    const LIB_VERSION = '1.3.0';
 
     public function setMerchantRsaPrivateKey($merchantRsaPrivateKey)
     {
@@ -638,7 +638,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
             return $parameters;
         }
 
-        $parameters['metadata']['php_library_version'] = self::LIB_VERSION;
+        $parameters['metadata']['php_library_version'] = LIB_VERSION;
 
         if ($sendPrivateData !== true) {
             unset($parameters['metadata']['app_version']);
