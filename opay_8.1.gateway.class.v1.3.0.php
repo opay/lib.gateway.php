@@ -10,7 +10,8 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     protected $signaturePassword;
     protected $merchantRsaPrivateKey;
     protected $opayCertificate;
-    
+    private $libVersion = '1.3.0';
+
     public function setMerchantRsaPrivateKey($merchantRsaPrivateKey)
     {
         $this->merchantRsaPrivateKey = $this->stripWhiteSpaceFromPem($merchantRsaPrivateKey);
@@ -54,7 +55,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     /**
      * @throws OpayGatewayException
      */
-    public function signArrayOfParameters($parametersArray)
+    public function signArrayOfParameters($parametersArray, $sendPrivateData = true)
     {
         // Clean signature parameters if someone tries to sign already signed array
         if (isset($parametersArray['rsa_signature'])) {
@@ -64,7 +65,9 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         if (isset($parametersArray['password_signature'])) {
             unset($parametersArray['password_signature']);   
         }
-        
+
+        $parametersArray = $this->addMetadata($parametersArray, $sendPrivateData);
+
         $signatureType = $this->getTypeOfSignatureIsUsed();
         
         $stringToBeSigned = '';
@@ -81,7 +84,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
 
             $stringToBeSigned .= $key . $val;
         }
-         
+
         if ($signatureType === self::SIGNATURE_TYPE_RSA) {
             $parametersArray['rsa_signature'] = $this->signStringUsingPrivateKey($stringToBeSigned, $this->merchantRsaPrivateKey);
 
@@ -347,7 +350,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
     {
         $rsaSignature = '';
         $passwordSignature = '';
-        
+
         if (isset($parametersArray['rsa_signature'])) {
             $rsaSignature = $parametersArray['rsa_signature']; 
             unset($parametersArray['rsa_signature']);   
@@ -541,7 +544,7 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
 
         throw new OpayGatewayException('allow_url_fopen must be set On.', OpayGatewayException::COMMUNICATION_WITH_SERVER_ERROR);
     }
-    
+
     private function iso369_3ToIso369_1($languageCode)
     {
         $iso3ToIso2ConversionList = array(
@@ -607,6 +610,59 @@ class OpayGateway implements OpayGatewayCoreInterface, OpayGatewayWebServiceInte
         $stringValue = preg_replace('/[^a-zA-Z0-9\+\/=\-\s\n]+/', '', $stringValue);
 
         return @$matches[0][0] . "\n" . str_replace(' ', '', $stringValue) . "\n" . @$matches[0][1];
+    }
+
+    private function denormalizeMetadata(&$parameters)
+    {
+        if (
+            !is_array($parameters)
+            || (array_key_exists('metadata', $parameters) && !is_array($parameters['metadata']))
+        ) {
+            return;
+        }
+
+        $parameters['metadata'] = json_encode($parameters['metadata']);
+    }
+
+    /**
+     * @param array $parameters
+     * @param bool $sendPrivateData
+     * @return array
+     */
+    private function addMetadata($parameters, $sendPrivateData)
+    {
+        if (
+            !is_array($parameters)
+            || (array_key_exists('metadata', $parameters) && !is_array($parameters['metadata']))
+        ) {
+            return $parameters;
+        }
+
+        $parameters['metadata']['php_library_version'] = $this->libVersion;
+
+        if ($sendPrivateData !== true) {
+            unset($parameters['metadata']['app_version']);
+            $this->denormalizeMetadata($parameters);
+
+            return $parameters;
+        }
+
+        try {
+            $phpVersion = PHP_VERSION;
+            if ($phpVersion === null || strlen($phpVersion) < 3 || strlen($phpVersion) > 20) {
+                $this->denormalizeMetadata($parameters);
+
+                return $parameters;
+            }
+
+            $parameters['metadata']['php_version'] = $phpVersion;
+        } catch (Exception $exception) {
+            // In case of exception ignore it and run code without metadata
+        }
+
+        $this->denormalizeMetadata($parameters);
+
+        return $parameters;
     }
 }
 
